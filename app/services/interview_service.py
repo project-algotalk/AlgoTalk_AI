@@ -4,6 +4,8 @@ import logging
 from app.schemas.interview import (
     QuestionGenerateRequestDTO,   # 질문 생성 요청 DTO
     QuestionGenerateResponseDTO,  # 질문 생성 응답 DTO
+    CsValidationRequestDTO,      # CS 질문 검증 요청 DTO
+    CsValidationResponseDTO,     # CS 질문 검증 응답 DTO
 )
 # 설정 모듈에서 환경변수 로드
 from app.core.config import settings
@@ -84,4 +86,61 @@ def generate_questions(request: QuestionGenerateRequestDTO) -> QuestionGenerateR
         raise HTTPException(
             status_code=502,
             detail="질문 생성 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요."
+        )
+def validate_cs_questions(request: CsValidationRequestDTO) -> CsValidationResponseDTO:
+    """
+    CS 관련 질문 여부 검증 함수
+    사용자가 직접 입력한 질문들이 CS 관련 질문인지 LLM 기반으로 판단
+    """
+
+    questions_str = "\n".join([f"{i+1}. {q}" for i, q in enumerate(request.questions)])
+
+    prompt = f"""
+아래 질문들이 CS(컴퓨터 과학) 기술면접과 관련된 질문인지 판단해주세요.
+
+CS 관련 질문 예시: 자료구조, 알고리즘, 운영체제, 네트워크, 데이터베이스, 프로그래밍 언어, 소프트웨어 개발, 시스템 설계 등
+
+질문 목록:
+{questions_str}
+
+각 질문에 대해 반드시 다음 형식으로 판단하세요:
+- questionText: 질문 내용 (원문 그대로)
+- isValid: CS 관련 여부 (true / false)
+- reason: 판단 이유 (한 문장)
+"""
+
+    try:
+        completion = client.beta.chat.completions.parse(
+            model="gpt-4o-2024-08-06",
+            messages=[
+                {
+                    "role": "system",
+                    "content": "당신은 CS 기술면접 전문가입니다. 질문이 CS 관련인지 판단해주세요. 반드시 JSON 형식으로만 응답하세요.",
+                },
+                {
+                    "role": "user",
+                    "content": prompt
+                },
+            ],
+            response_format=CsValidationResponseDTO,
+        )
+
+        result = completion.choices[0].message.parsed
+
+        if result is None:
+            logger.error("CS 질문 검증 Structured Output 파싱 실패")
+            raise HTTPException(
+                status_code=502,
+                detail="질문 검증 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요."
+            )
+
+        return result
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception(f"CS 질문 검증 실패: {str(e)}")
+        raise HTTPException(
+            status_code=502,
+            detail="질문 검증 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요."
         )
