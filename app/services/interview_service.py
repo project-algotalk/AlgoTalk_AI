@@ -24,6 +24,7 @@ def generate_questions(request: QuestionGenerateRequestDTO) -> QuestionGenerateR
     prompt = f"""
 당신은 CS 기술면접 전문가입니다.
 아래 조건에 맞는 면접 질문을 생성해주세요.
+모든 질문과 답변은 반드시 한국어로 작성하세요.
 
 - 카테고리: {categories_str}
 - 질문 수: {request.questionCount}개
