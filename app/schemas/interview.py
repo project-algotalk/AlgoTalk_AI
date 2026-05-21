@@ -26,7 +26,10 @@ class QuestionGenerateResponseDTO(BaseModel):
     questions: list[QuestionItemDTO]  # 생성된 질문 목록
 # ## CS 질문 검증 요청 DTO
 class CsValidationRequestDTO(BaseModel):
-    questions: list[str] = Field(..., min_length=1)  # 검증할 질문 목록
+    questions: Annotated[
+        list[Annotated[str, Field(max_length=500)]],
+        Field(min_length=1, max_length=5)  # 직접입력 최대 5개
+    ]  # 검증할 질문 목록 (최소 1개, 최대 5개 / 각 질문 최대 500자)
 # ## 개별 질문 검증 결과
 class CsValidationItemDTO(BaseModel):
     questionText: str   # 질문 내용
