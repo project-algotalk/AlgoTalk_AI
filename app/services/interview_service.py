@@ -91,6 +91,8 @@ def generate_questions(request: QuestionGenerateRequestDTO) -> QuestionGenerateR
             status_code=502,
             detail="질문 생성 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요."
         )
+
+
 def validate_cs_questions(request: CsValidationRequestDTO) -> CsValidationResponseDTO:
     """
     CS 관련 질문 여부 검증 함수
