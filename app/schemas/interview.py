@@ -24,3 +24,17 @@ class QuestionItemDTO(BaseModel):
 # interviewService로 반환하는 응답 데이터
 class QuestionGenerateResponseDTO(BaseModel):
     questions: list[QuestionItemDTO]  # 생성된 질문 목록
+# ## CS 질문 검증 요청 DTO
+class CsValidationRequestDTO(BaseModel):
+    questions: Annotated[
+        list[Annotated[str, Field(max_length=500)]],
+        Field(min_length=1, max_length=5)  # 직접입력 최대 5개
+    ]  # 검증할 질문 목록 (최소 1개, 최대 5개 / 각 질문 최대 500자)
+# ## 개별 질문 검증 결과
+class CsValidationItemDTO(BaseModel):
+    questionText: str   # 질문 내용
+    isValid: bool       # CS 관련 여부
+    reason: str         # 판단 이유
+# ## CS 질문 검증 응답 DTO
+class CsValidationResponseDTO(BaseModel):
+    results: list[CsValidationItemDTO]  # 검증 결과 목록

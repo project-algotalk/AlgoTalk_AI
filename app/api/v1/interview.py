@@ -4,9 +4,7 @@ from app.schemas.interview import (
     QuestionGenerateResponseDTO,
 )
 from app.services.interview_service import generate_questions
-
 router = APIRouter()
-
 # 면접 질문 생성 엔드포인트
 # interviewService로부터 요청을 받아 LLM 기반 질문 생성 후 반환
 @router.post("/questions", response_model=QuestionGenerateResponseDTO)
