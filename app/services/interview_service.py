@@ -1,17 +1,15 @@
 from fastapi import HTTPException
 from openai import OpenAI
-
+import logging
 from app.schemas.interview import (
     QuestionGenerateRequestDTO,   # 질문 생성 요청 DTO
     QuestionGenerateResponseDTO,  # 질문 생성 응답 DTO
 )
-
 # 설정 모듈에서 환경변수 로드
 from app.core.config import settings
-
+logger = logging.getLogger(__name__)
 # OpenAI 클라이언트 초기화
 client = OpenAI(api_key=settings.OPENAI_API_KEY)
-
 def generate_questions(request: QuestionGenerateRequestDTO) -> QuestionGenerateResponseDTO:
     """
     LLM 기반 면접 질문 생성 함수
@@ -61,7 +59,7 @@ def generate_questions(request: QuestionGenerateRequestDTO) -> QuestionGenerateR
 
         # Structured Output 파싱 실패 시 None 반환 방어
         if result is None:
-            print(f"[ERROR] OpenAI Structured Output 파싱 실패: {completion.choices[0].message}")
+            logger.error(f"OpenAI Structured Output 파싱 실패: {completion.choices[0].message}")
             raise HTTPException(
                 status_code=502,
                 detail="질문 생성 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요."
@@ -81,7 +79,7 @@ def generate_questions(request: QuestionGenerateRequestDTO) -> QuestionGenerateR
         raise
     except Exception as e:
         # 네트워크/인증/rate-limit 등 OpenAI 호출 에러 처리 (내부 에러 로깅)
-        print(f"[ERROR] OpenAI API 호출 실패: {str(e)}")
+        logger.exception(f"OpenAI API 호출 실패: {str(e)}")
         raise HTTPException(
             status_code=502,
             detail="질문 생성 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요."
