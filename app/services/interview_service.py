@@ -59,6 +59,14 @@ def generate_questions(request: QuestionGenerateRequestDTO) -> QuestionGenerateR
 
         result = completion.choices[0].message.parsed
 
+        # Structured Output 파싱 실패 시 None 반환 방어
+        if result is None:
+            print(f"[ERROR] OpenAI Structured Output 파싱 실패: {completion.choices[0].message}")
+            raise HTTPException(
+                status_code=502,
+                detail="질문 생성 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요."
+            )
+
         # LLM 응답 검증: 요청한 질문 수와 실제 반환된 질문 수 일치 여부 확인
         if len(result.questions) != request.questionCount:
             raise HTTPException(
@@ -72,8 +80,9 @@ def generate_questions(request: QuestionGenerateRequestDTO) -> QuestionGenerateR
     except HTTPException:
         raise
     except Exception as e:
-        # 네트워크/인증/rate-limit 등 OpenAI 호출 에러 처리
+        # 네트워크/인증/rate-limit 등 OpenAI 호출 에러 처리 (내부 에러 로깅)
+        print(f"[ERROR] OpenAI API 호출 실패: {str(e)}")
         raise HTTPException(
             status_code=502,
-            detail=f"OpenAI API 호출 중 오류가 발생했습니다: {str(e)}"
+            detail="질문 생성 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요."
         )

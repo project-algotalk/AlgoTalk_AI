@@ -6,7 +6,7 @@ from pydantic import Field
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 
-    # OpenAI API 키 (.env의 OPEN_API_KEY 값과 매핑)
+    # OpenAI API 키 (.env의 OPENAI_API_KEY 값과 매핑)
     OPENAI_API_KEY: str = Field(..., env="OPENAI_API_KEY")
 
 # 모듈 레벨 인스턴스 생성 (다른 모듈에서 import해서 사용)
