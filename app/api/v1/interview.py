@@ -13,8 +13,3 @@ router = APIRouter()
 def create_questions(request: QuestionGenerateRequestDTO) -> QuestionGenerateResponseDTO:
     # 질문 생성 서비스 호출
     return generate_questions(request)
-# CS 질문 검증 엔드포인트
-# interviewService로부터 직접입력 질문 목록을 받아 CS 관련 여부 판단 후 반환
-@router.post("/validate/cs-questions", response_model=CsValidationResponseDTO)
-def validate_questions(request: CsValidationRequestDTO) -> CsValidationResponseDTO:
-    return validate_cs_questions(request)
