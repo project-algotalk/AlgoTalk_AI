@@ -34,6 +34,7 @@ def transcribe_audio(file: UploadFile) -> SttResponseDTO:
     음성 파일을 텍스트로 변환하고 STT 분석 지표를 반환
     Whisper API 호출 → 텍스트 변환 + ASR confidence + 무음 비율 + WPM + 추임새 계산
     """
+    tmp_path: str | None = None
     try:
         # 1. 임시 파일로 저장
         suffix = os.path.splitext(file.filename)[-1] or ".webm"
@@ -50,8 +51,6 @@ def transcribe_audio(file: UploadFile) -> SttResponseDTO:
                 response_format="verbose_json",
                 prompt="음, 어, 네, 그, 저, 뭐, 아"  # 추임새 포함 유도
             )
-
-        os.unlink(tmp_path)
 
         # 3. 텍스트 추출
         answer_text = response.text.strip()
@@ -105,3 +104,6 @@ def transcribe_audio(file: UploadFile) -> SttResponseDTO:
             status_code=502,
             detail="음성 변환 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요."
         )
+    finally:
+        if tmp_path and os.path.exists(tmp_path):
+            os.unlink(tmp_path)
