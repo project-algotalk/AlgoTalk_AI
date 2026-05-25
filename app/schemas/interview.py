@@ -13,6 +13,7 @@ class Difficulty(str, Enum):
 class QuestionGenerateRequestDTO(BaseModel):
     categories: Annotated[list[str], Field(min_length=1)]      # 카테고리 목록 (최소 1개) (예: ["백엔드 개발자", "운영체제", "네트워크"])
     questionCount: Annotated[int, Field(ge=1, le=5)]            # 생성할 질문 수 (1~5개)
+    previousQuestions: list[str] = Field(default_factory=list)  # 최근 출제 질문 목록 (기본값: 빈 리스트)
 class QuestionItemDTO(BaseModel):
     order: int = Field(..., ge=1)           # 질문 순서 (1부터 시작)
     category: str        # 해당 카테고리명

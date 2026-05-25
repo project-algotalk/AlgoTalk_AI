@@ -13,35 +13,70 @@ logger = logging.getLogger(__name__)
 # OpenAI 클라이언트 초기화
 client = OpenAI(api_key=settings.OPENAI_API_KEY)
 def generate_questions(request: QuestionGenerateRequestDTO) -> QuestionGenerateResponseDTO:
-    """
-    LLM 기반 면접 질문 생성 함수
-    interviewService로부터 카테고리, 질문 수를 받아
-    OpenAI Structured Output으로 정형화된 질문 목록 반환
-    """
 
-    # 카테고리 리스트를 문자열로 변환 (프롬프트 삽입용)
     categories_str = ", ".join(request.categories)
 
-    # LLM 질문 생성 프롬프트 구성
+    # 히스토리 블록 생성
+    if request.previousQuestions:
+        history_block = "\n".join([f"- {q}" for q in request.previousQuestions[:30]])
+    else:
+        history_block = "- (없음)"
+
     prompt = f"""
 당신은 CS 기술면접 전문가입니다.
-아래 조건에 맞는 면접 질문을 생성해주세요.
+아래 조건을 모두 만족하는 질문을 생성하세요.
 
+[입력]
 - 카테고리: {categories_str}
 - 질문 수: {request.questionCount}개
-- 모든 질문과 답변은 반드시 한국어로 작성하세요.
+- 모든 출력은 한국어
 
-각 질문은 반드시 다음 형식으로 작성하세요:
+[출제 원칙]
+1) 주제 다양성
+- 카테고리 내 다양한 세부 주제를 골고루 출제하세요.
+- 특정 주제에 편중되지 않도록 하세요.
+- 한 세션 내에서 동일한 세부 주제는 최대 1회만 허용합니다.
+
+2) 관점 다양화
+- 아래 관점을 골고루 섞어서 출제:
+  - 개념 정의형
+  - 비교/트레이드오프형
+  - 설계/아키텍처형
+  - 장애/트러블슈팅형
+  - 성능 최적화형
+  - 실무 의사결정/사례형
+- 동일 관점의 질문이 2개를 초과해 연속되지 않게 할 것
+
+3) 중복 방지
+- 동일 세션 내 동일한 세부 주제의 완전 중복 금지
+- "~이란 무엇인가요?" 패턴 반복 최소화
+- intent가 서로 겹치지 않게 작성
+
+4) 난이도 분포
+- EASY / MEDIUM / HARD를 균형 배치 (MEDIUM 중심)
+
+[재출제 방지 히스토리]
+- 아래는 같은 사용자가 최근에 이미 받은 질문 목록입니다.
+- 의미적으로 유사한 질문도 재출제하지 마세요.
+- 단, 같은 주제 자체를 금지하는 것은 아닙니다.
+- 같은 주제를 사용한다면 질문의 관점, 상황, 요구하는 답변 방향을 반드시 다르게 만드세요.
+{history_block}
+
+[출력 형식]
+각 질문은 반드시 다음 필드만 포함:
 - order: 질문 순서 (1부터 시작)
-- category: 해당 카테고리명 (위 카테고리 중 하나)
-- difficulty: 난이도 (반드시 대문자로 EASY / MEDIUM / HARD 중 하나)
+- category: 해당 카테고리명
+- difficulty: 난이도 (EASY / MEDIUM / HARD 중 하나)
 - content: 질문 내용
 - intent: 출제 의도 (한 문장)
-- keywords: 답변에 필수로 들어가야되는 핵심 키워드 리스트 (2~4개)
+- keywords: 핵심 키워드 리스트 (2~4개)
+
+중요:
+- Structured Output(JSON 스키마)에 정확히 맞춰서만 출력
+- 스키마 외 필드 추가 금지
 """
 
     try:
-        # OpenAI Structured Output 호출
         completion = client.beta.chat.completions.parse(
             model="gpt-4o-2024-08-06",
             messages=[
