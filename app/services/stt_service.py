@@ -86,6 +86,43 @@ def transcribe_audio(file: UploadFile) -> SttResponseDTO:
         # 8. 추임새 횟수 및 비율 계산
         filler_count, filler_ratio = count_fillers(answer_text)
 
+        # 9. STT 품질 검증
+        # no_speech_prob: Whisper가 각 segment에서 "말소리가 없을 확률" (0.0 ~ 1.0)
+        #   - 0.0에 가까울수록 말소리가 확실히 있음
+        #   - 1.0에 가까울수록 말소리가 없음 (무음 또는 생활 소음)
+        # avg_no_speech_prob: 전체 segment의 no_speech_prob 평균
+        #   - 실제 발화 시: 0.0 ~ 0.2 수준
+        #   - 생활 소음만 있을 때: 0.3 이상 (Whisper 환각 가능성 높음)
+        no_speech_probs = [
+            seg.no_speech_prob for seg in segments
+            if hasattr(seg, 'no_speech_prob')
+        ]
+        avg_no_speech_prob = round(
+            sum(no_speech_probs) / len(no_speech_probs), 4
+        ) if no_speech_probs else 0.0
+
+        print(
+            f"[STT_DEBUG] silence_ratio={silence_ratio}, asr_confidence={asr_confidence}, avg_no_speech_prob={avg_no_speech_prob}, text='{answer_text}'")
+
+        # 아래 조건 중 하나라도 해당하면 Whisper 환각으로 판단하여 빈 결과 반환
+        # - silence_ratio > 70: 무음 구간이 70% 초과
+        # - asr_confidence < 0.3: ASR 신뢰도가 30% 미만
+        # - avg_no_speech_prob > 0.3: 말소리가 없을 평균 확률이 30% 초과
+        if silence_ratio > 70 or asr_confidence < 0.3 or avg_no_speech_prob > 0.3:
+            logger.warning(
+                "[STT_QUALITY_FAIL] 품질 기준 미달 - silence_ratio=%.2f, asr_confidence=%.4f, avg_no_speech_prob=%.4f, text='%s'",
+                silence_ratio, asr_confidence, avg_no_speech_prob, answer_text
+            )
+            return SttResponseDTO(
+                answerText="",
+                answerDuration=answer_duration,
+                wpm=0,
+                silenceRatio=silence_ratio,
+                asrConfidence=asr_confidence,
+                fillerCount=0,
+                fillerRatio=0.0,
+            )
+
         return SttResponseDTO(
             answerText=answer_text,
             answerDuration=answer_duration,
