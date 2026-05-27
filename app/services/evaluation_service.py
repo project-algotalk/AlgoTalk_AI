@@ -13,13 +13,16 @@ client = OpenAI(api_key=settings.OPENAI_API_KEY)
 def evaluate_answer(request: AnswerEvaluationRequestDTO) -> AnswerEvaluationResponseDTO:
     """
     LLM 기반 면접 답변 내용 평가 함수
-    질문 텍스트, 핵심 키워드, 사용자 답변을 받아
-    점수, 피드백, 모범 답변을 반환
+    - answerTest가 있는 경우: 전체 평가(점수, 피드백, 모범 답변, 학습 팁, 꼬리 질문)
+    - answerText가 비어있거나 질문과 무관한 내용인 경우: 모범 답변, 학습 팁, 꼬리 질문은 그대로 반환하되 contentScore=0, feedback=null로 평가
     """
 
     keywords_str = ", ".join(request.keywords) if request.keywords else "없음"
+    has_answer = bool(request.answerText and request.answerText.strip())
 
-    prompt = f"""
+    if has_answer:
+        # 답변이 있는 경우: 전체 평가
+        prompt = f"""
 당신은 CS 기술면접 전문 평가자입니다.
 아래 면접 질문과 사용자의 답변을 평가해주세요.
 
@@ -55,7 +58,31 @@ def evaluate_answer(request: AnswerEvaluationRequestDTO) -> AnswerEvaluationResp
 중요:
 - 답변이 비어있거나 질문과 무관한 내용이면 contentScore는 0점
 - 모든 출력은 반드시 한국어로 작성
-"""
+    """
+    else:
+        # 답변이 없는 경우: 모범 답변, 학습 팁, 꼬리 질문만 생성
+        prompt = f"""
+당신은 CS 기술면접 전문 평가자입니다.
+아래 면접 질문과 사용자의 답변을 평가해주세요.
+
+[면접 질문]
+{request.questionText}
+
+[핵심 키워드]
+{keywords_str}
+
+[출력 형식]
+- contentScore: 반드시 0 (답변 없음)
+- feedback: 반드시 None (답변 없음. 피드백 불필요)
+- modelAnswer: 모범 답변 (핵심 키워드를 포함한 이상적인 답변, 한국어)
+- studyTip: 이 질문과 관련하여 더 공부하면 좋을 내용 (2~3문장, 한국어)
+- followUpQuestions: 면접관이 이어서 물어볼 수 있는 꼬리 질문 2~3개 (한국어 리스트)
+
+중요:
+- 답변이 비어있거나 질문과 무관한 내용이면 contentScore는 0점
+- feedback: 반드시 None
+- 모든 출력은 반드시 한국어로 작성
+    """
 
     try:
         completion = client.beta.chat.completions.parse(
