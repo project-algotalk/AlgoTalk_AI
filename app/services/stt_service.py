@@ -5,7 +5,7 @@ import os
 import math
 import re
 from openai import OpenAI
-from app.schemas.stt import SttResponseDTO
+from app.schemas.stt import SttResponseDTO, AnswerStatus
 # 설정 모듈에서 환경변수 로드
 from app.core.config import settings
 logger = logging.getLogger(__name__)
@@ -114,6 +114,7 @@ def transcribe_audio(file: UploadFile) -> SttResponseDTO:
                 silence_ratio, asr_confidence, avg_no_speech_prob, answer_text
             )
             return SttResponseDTO(
+                answerStatus=AnswerStatus.QUALITY_FAIL,
                 answerText="",
                 answerDuration=answer_duration,
                 wpm=0,
@@ -124,6 +125,7 @@ def transcribe_audio(file: UploadFile) -> SttResponseDTO:
             )
 
         return SttResponseDTO(
+            answerStatus=AnswerStatus.ANSWERED,
             answerText=answer_text,
             answerDuration=answer_duration,
             wpm=wpm,
