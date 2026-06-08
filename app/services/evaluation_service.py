@@ -19,6 +19,7 @@ def evaluate_answer(request: AnswerEvaluationRequestDTO) -> AnswerEvaluationResp
 
     keywords_str = ", ".join(request.keywords) if request.keywords else "없음"
     has_answer = bool(request.answerText and request.answerText.strip())
+    logger.debug(f"has_answer: {has_answer}")
 
     if has_answer:
         # 답변이 있는 경우: 전체 평가
