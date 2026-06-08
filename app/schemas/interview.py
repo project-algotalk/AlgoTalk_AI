@@ -1,0 +1,41 @@
+# # 필요한 라이브러리 불러오기
+from pydantic import BaseModel, Field
+from typing import Annotated
+from enum import Enum
+# # 함수 설정
+# ## 면접 질문 난이도 설정
+class Difficulty(str, Enum):
+    EASY = "EASY"
+    MEDIUM = "MEDIUM"
+    HARD = "HARD"
+# ## 면접 질문 생성 요청 DTO
+# interviewService로부터 전달받는 요청 데이터
+class QuestionGenerateRequestDTO(BaseModel):
+    categories: Annotated[list[str], Field(min_length=1)]      # 카테고리 목록 (최소 1개) (예: ["백엔드 개발자", "운영체제", "네트워크"])
+    questionCount: Annotated[int, Field(ge=1, le=5)]            # 생성할 질문 수 (1~5개)
+    previousQuestions: list[str] = Field(default_factory=list)  # 최근 출제 질문 목록 (기본값: 빈 리스트)
+class QuestionItemDTO(BaseModel):
+    order: int = Field(..., ge=1)           # 질문 순서 (1부터 시작)
+    category: str        # 해당 카테고리명
+    difficulty: Difficulty  # 난이도
+    content: str         # 질문 내용
+    intent: str          # 출제 의도
+    keywords: Annotated[list[str], Field(min_length=2, max_length=4)]  # 핵심 키워드 리스트
+# ## 면접 질문 생성 응답 DTO
+# interviewService로 반환하는 응답 데이터
+class QuestionGenerateResponseDTO(BaseModel):
+    questions: list[QuestionItemDTO]  # 생성된 질문 목록
+# ## CS 질문 검증 요청 DTO
+class CsValidationRequestDTO(BaseModel):
+    questions: Annotated[
+        list[Annotated[str, Field(max_length=500)]],
+        Field(min_length=1, max_length=5)  # 직접입력 최대 5개
+    ]  # 검증할 질문 목록 (최소 1개, 최대 5개 / 각 질문 최대 500자)
+# ## 개별 질문 검증 결과
+class CsValidationItemDTO(BaseModel):
+    questionText: str   # 질문 내용
+    isValid: bool       # CS 관련 여부
+    reason: str         # 판단 이유
+# ## CS 질문 검증 응답 DTO
+class CsValidationResponseDTO(BaseModel):
+    results: list[CsValidationItemDTO]  # 검증 결과 목록
