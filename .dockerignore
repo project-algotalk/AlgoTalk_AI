@@ -1,0 +1,9 @@
+.env
+.git
+.idea
+.github
+.virtual_documents
+anaconda_projects
+__pycache__
+*.pyc
+*.ipynb
