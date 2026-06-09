@@ -10,7 +10,7 @@ _ENV_FILE = BASE_DIR / ".env"
 # pydantic_settings를 사용해 .env 파일의 환경변수를 타입 안전하게 관리
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file=_ENV_FILE,
+        env_file=".env",
         env_file_encoding="utf-8"
     )
 
