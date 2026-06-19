@@ -29,7 +29,24 @@ def count_fillers(text: str) -> tuple[int, float]:
     filler_ratio = round((filler_count / total_words) * 100, 2)
 
     return filler_count, filler_ratio
-def transcribe_audio(file: UploadFile) -> SttResponseDTO:
+
+def build_transcription_prompt(question_text: str | None = None) -> str:
+    """
+    Whisper가 직접 입력 질문의 기술 용어를 문맥으로 활용할 수 있도록 프롬프트를 구성합니다.
+    """
+    filler_prompt = "음, 어, 네, 그, 저, 뭐, 아"
+    normalized_question = " ".join((question_text or "").split())
+
+    if not normalized_question:
+        return filler_prompt
+
+    return (
+        "다음은 한국어 CS/IT 기술 면접 답변 음성입니다. "
+        f"면접 질문: {normalized_question}\n"
+        f"답변에는 다음과 같은 추임새가 포함될 수 있습니다: {filler_prompt}"
+    )
+
+def transcribe_audio(file: UploadFile, question_text: str | None = None) -> SttResponseDTO:
     """
     음성 파일을 텍스트로 변환하고 STT 분석 지표를 반환
     Whisper API 호출 → 텍스트 변환 + ASR confidence + 무음 비율 + WPM + 추임새 계산
@@ -49,7 +66,7 @@ def transcribe_audio(file: UploadFile) -> SttResponseDTO:
                 file=audio_file,
                 language="ko",
                 response_format="verbose_json",
-                prompt="음, 어, 네, 그, 저, 뭐, 아"  # 추임새 포함 유도
+                prompt=build_transcription_prompt(question_text)  # 질문 문맥 + 추임새 포함 유도
             )
 
         # 3. 텍스트 추출
