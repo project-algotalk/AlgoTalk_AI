@@ -6,13 +6,17 @@ import math
 import re
 from openai import OpenAI
 from app.schemas.stt import SttResponseDTO, AnswerStatus
+from app.services.stt_quality import should_fail_stt_quality
 # 설정 모듈에서 환경변수 로드
 from app.core.config import settings
 logger = logging.getLogger(__name__)
 # OpenAI 클라이언트 초기화
 client = OpenAI(api_key=settings.OPENAI_API_KEY)
+
 # 추임새 목록
 FILLER_WORDS = {"음", "어", "네", "그", "저", "뭐", "아", "음~", "어~", "그~", "저~"}
+
+
 def count_fillers(text: str) -> tuple[int, float]:
     """
     STT 변환 텍스트에서 추임새 횟수와 비율 계산
@@ -30,6 +34,7 @@ def count_fillers(text: str) -> tuple[int, float]:
 
     return filler_count, filler_ratio
 
+
 def build_transcription_prompt(question_text: str | None = None) -> str:
     """
     Whisper가 직접 입력 질문의 기술 용어를 문맥으로 활용할 수 있도록 프롬프트를 구성합니다.
@@ -45,6 +50,7 @@ def build_transcription_prompt(question_text: str | None = None) -> str:
         f"면접 질문: {normalized_question}\n"
         f"답변에는 다음과 같은 추임새가 포함될 수 있습니다: {filler_prompt}"
     )
+
 
 def transcribe_audio(file: UploadFile, question_text: str | None = None) -> SttResponseDTO:
     """
@@ -121,11 +127,10 @@ def transcribe_audio(file: UploadFile, question_text: str | None = None) -> SttR
         print(
             f"[STT_DEBUG] silence_ratio={silence_ratio}, asr_confidence={asr_confidence}, avg_no_speech_prob={avg_no_speech_prob}, text='{answer_text}'")
 
-        # 아래 조건 중 하나라도 해당하면 Whisper 환각으로 판단하여 빈 결과 반환
-        # - silence_ratio > 70: 무음 구간이 70% 초과
-        # - asr_confidence < 0.3: ASR 신뢰도가 30% 미만
-        # - avg_no_speech_prob > 0.3: 말소리가 없을 평균 확률이 30% 초과
-        if silence_ratio > 70 or asr_confidence < 0.3 or avg_no_speech_prob > 0.3:
+        # 실제 답변 텍스트가 있는 경우 no_speech_prob 하나만으로 실패 처리하지 않습니다.
+        # 직접 입력한 기술 질문 답변처럼 전문 용어/짧은 답변에서는 no_speech_prob가 높아도
+        # answer_text와 asr_confidence가 양호하면 답변으로 인정합니다.
+        if should_fail_stt_quality(answer_text, silence_ratio, asr_confidence, avg_no_speech_prob):
             logger.warning(
                 "[STT_QUALITY_FAIL] 품질 기준 미달 - silence_ratio=%.2f, asr_confidence=%.4f, avg_no_speech_prob=%.4f, text='%s'",
                 silence_ratio, asr_confidence, avg_no_speech_prob, answer_text
