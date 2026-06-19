@@ -1,8 +1,11 @@
 from fastapi import FastAPI
+from app.core.logging_config import setup_logging
 from app.api.v1.interview import router as interview_router
 from app.api.v1.validation import router as validation_router
 from app.api.v1.stt import router as stt_router
 from app.api.v1.evaluation import router as evaluation_router
+
+setup_logging()
 
 app = FastAPI(title="AlgoTalk AI Service")
 
