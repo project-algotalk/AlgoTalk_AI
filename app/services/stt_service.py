@@ -124,8 +124,10 @@ def transcribe_audio(file: UploadFile, question_text: str | None = None) -> SttR
             sum(no_speech_probs) / len(no_speech_probs), 4
         ) if no_speech_probs else 0.0
 
-        print(
-            f"[STT_DEBUG] silence_ratio={silence_ratio}, asr_confidence={asr_confidence}, avg_no_speech_prob={avg_no_speech_prob}, text='{answer_text}'")
+        logger.info(
+            "STT 분석 결과 - silence_ratio=%.2f, asr_confidence=%.4f, avg_no_speech_prob=%.4f, text='%s'",
+            silence_ratio, asr_confidence, avg_no_speech_prob, answer_text
+        )
 
         # 실제 답변 텍스트가 있는 경우 no_speech_prob 하나만으로 실패 처리하지 않습니다.
         # 직접 입력한 기술 질문 답변처럼 전문 용어/짧은 답변에서는 no_speech_prob가 높아도
